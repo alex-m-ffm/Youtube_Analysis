@@ -1,0 +1,11 @@
+google-api-python-client
+google-auth
+google-auth-oauthlib
+pandas
+matplotlib
+seaborn
+cryptography
+httplib2
+uritemplate
+statsmodels
+PIL
