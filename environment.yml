@@ -1,0 +1,19 @@
+name: youtube-analysis
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - jupyter
+  - pandas
+  - matplotlib
+  - seaborn
+  - google-api-python-client
+  - google-auth
+  - google-auth-oauthlib
+  - cryptography
+  - httplib2
+  - uritemplate
+  - statsmodels
+  - PIL
+  - ipykernel

@@ -6,6 +6,22 @@ import re
 import pandas as pd
 
 def parse_published_at(published_at_str):
+    """
+    Parses the 'publishedAt' string into a datetime.date object.
+
+    The function attempts to parse the input string with multiple formats, 
+    including milliseconds, without milliseconds, and with timezone offset.
+    If parsing fails for all formats, it raises a ValueError.
+
+    Args:
+        published_at_str (str): A string representing the publishedAt timestamp.
+
+    Returns:
+        datetime.date: The date extracted from the parsed timestamp.
+
+    Raises:
+        ValueError: If the input string does not match any of the expected formats.
+    """
     try:
         # Attempt to parse with the first format including milliseconds
         published_at = datetime.strptime(published_at_str, '%Y-%m-%dT%H:%M:%S.%fZ')
@@ -27,6 +43,16 @@ def parse_published_at(published_at_str):
     return published_date
 
 def parse_duration(duration_str):
+    """
+    Parse a YouTube video duration string into total duration in seconds.
+
+    Args:
+        duration_str (str): A string representing the duration of a YouTube video.
+
+    Returns:
+        int: Total duration of the video in seconds.
+
+    """
 
     # Return zero timedelta if duration string is 'P0D'
     if duration_str == 'P0D':
@@ -48,14 +74,34 @@ def parse_duration(duration_str):
 
     return total_seconds
 
-# Define a function to extract hashtags from a string
+
 def extract_hashtags(description):
-    # Use regular expression to find all hashtags (words starting with '#')
+    """
+    Extract hashtags from a given description.
+
+    Args:
+        description (str): The description from which hashtags will be extracted.
+
+    Returns:
+        list: A list of hashtags found in the description.
+
+    """
     hashtags = re.findall(r'#\w+', description)
     return hashtags
 
-def get_channel_data_from_handle(youtube, handle: str):
-    request = youtube.channels().list(
+def get_channel_data_from_handle(api_client, handle: str):
+    """
+    Retrieve data about a YouTube channel using the handle.
+
+    Args:
+        api_client: An initialized instance of the YouTube API client.
+        handle (str): The handle (username) of the YouTube channel.
+
+    Returns:
+        dict: A dictionary containing data about the YouTube channel.
+
+    """
+    request = api_client.channels().list(
         part='id,snippet,statistics,topicDetails,brandingSettings,contentDetails',
         forHandle=handle
     )
@@ -86,8 +132,19 @@ def get_channel_data_from_handle(youtube, handle: str):
 
     return channel_dict
 
-def get_video_data_from_id(youtube, id: str):
-    request = youtube.videos().list(
+def get_video_data_from_id(api_client, id: str):
+    """
+    Retrieve data about a YouTube video using its ID.
+
+    Args:
+        api_client: An initialized instance of the YouTube API client.
+        id (str): The ID of the YouTube video.
+
+    Returns:
+        list: A list of dictionaries containing data about the YouTube videos.
+
+    """
+    request = api_client.videos().list(
         part='snippet,contentDetails,statistics,localizations',
         id=id,
         maxResults=50
@@ -111,15 +168,25 @@ def get_video_data_from_id(youtube, id: str):
 
     return video_list
 
-def get_activities_data_from_id(youtube, channelId: str):
+def get_activities_data_from_id(api_client, channelId: str):
+    """
+    Retrieve activities data for a YouTube channel using its channel ID.
 
+    Args:
+        api_client: An initialized instance of the YouTube API client.
+        channelId (str): The channel ID of the YouTube channel.
+
+    Returns:
+        list: A list of dictionaries containing activities data for the channel.
+
+    """
     activities_items_list = []
 
     nextPageToken = None
 
     while True:
 
-        request = youtube.activities().list(
+        request = api_client.activities().list(
             part='contentDetails,snippet',
             channelId=channelId,
             maxResults=50,
@@ -158,15 +225,42 @@ def get_activities_data_from_id(youtube, channelId: str):
     return activities_items_list
 
 
-def get_playlist_items_from_id(youtube, id: str):
+def get_playlist_items_from_id(api_client, id: str):
+    """
+    Retrieve playlist items data for a YouTube playlist using its playlist ID.
 
+    This function fetches information about the videos in the specified playlist,
+    including details such as title, description, channel ID, channel title, video ID,
+    URL, published date, category ID, duration, view count, like count, and comment count.
+
+    Args:
+        api_client: An initialized instance of the YouTube API client.
+        id (str): The playlist ID of the YouTube playlist.
+
+    Returns:
+        list: A list of dictionaries containing playlist items data.
+              Each dictionary represents a playlist item and contains the following keys:
+              - title: Title of the playlist item.
+              - description: Description of the playlist item.
+              - channelId: Channel ID of the playlist item.
+              - channelTitle: Channel title of the playlist item.
+              - videoId: Video ID of the playlist item.
+              - url: URL of the playlist item.
+              - publishedAt: Published date of the playlist item.
+              - categoryId: Category ID of the playlist item.
+              - duration: Duration of the playlist item (in seconds).
+              - viewCount: View count of the playlist item.
+              - likeCount: Like count of the playlist item.
+              - commentCount: Comment count of the playlist item.
+
+    """
     playlist_items_list = []
 
     nextPageToken = None
 
     while True:
 
-        request = youtube.playlistItems().list(
+        request = api_client.playlistItems().list(
             part='snippet,contentDetails',
             playlistId=id,
             maxResults=50,
@@ -179,7 +273,7 @@ def get_playlist_items_from_id(youtube, id: str):
         video_ids = [item['contentDetails']['videoId'] for item in response['items']]
 
         # Retrieve video details for the current batch
-        video_details = get_video_data_from_id(youtube=youtube, id=','.join(video_ids))
+        video_details = get_video_data_from_id(api_client, id=','.join(video_ids))
 
         # Match video details with playlist items and combine information
         for playlist_item in response['items']:
@@ -192,6 +286,7 @@ def get_playlist_items_from_id(youtube, id: str):
             # Parse 'publishedAt' string to datetime object using defined function
             published_date = parse_published_at(playlist_item['contentDetails']['videoPublishedAt'])
 
+            #write the dictionary for the individual video
             if video_detail:
                 pl_item_dict = {
                     'title': playlist_item['snippet']['title'],
@@ -233,9 +328,29 @@ def get_playlist_items_from_id(youtube, id: str):
 
     return playlist_items_list
 
-def get_analytics_data_per_video(youtubeAnalytics, videoId: str, startDate: str, endDate: str):
+def get_analytics_data_per_video(api_client, videoId: str, startDate: str, endDate: str):
+    """
+    Retrieve analytics data for a specific video within a specified date range.
 
-    report = youtubeAnalytics.reports().query(
+    This function queries the YouTube Analytics API to fetch various metrics and dimensions
+    for a particular video over a specified time period. The metrics include views, likes, shares,
+    estimated minutes watched, average view duration, average view percentage, annotation impressions,
+    annotation click-through rate, and annotation close rate.
+
+    Args:
+        api_client: An initialized instance of the YouTube Analytics API client.
+        videoId (str): The ID of the YouTube video for which analytics data is to be retrieved.
+        startDate (str): The start date of the date range in the format 'YYYY-MM-DD'.
+        endDate (str): The end date of the date range in the format 'YYYY-MM-DD'.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the analytics data for the specified video.
+                          Each row represents a day within the specified date range, and the columns
+                          include metrics such as views, likes, shares, etc. Additionally, the DataFrame
+                          contains a 'videoId' column with the ID of the corresponding video.
+
+    """
+    report = api_client.reports().query(
     ids="channel==MINE",
     startDate=startDate,
     endDate=endDate,
