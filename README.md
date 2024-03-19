@@ -2,6 +2,8 @@
 
 This repository contains Python scripts and Jupyter notebooks for analyzing YouTube data related to Dragonboat paddling channels. It includes functions to interact with the YouTube Data API to retrieve channel information, video data, activities, and analytics. The analysis aims to gain insights into channel performance, viewer engagement, and content trends.
 
+You can read my analysis in my [blog post](https://alex.melemenidis.de/post/2024-03-19-why-i-am-not-viral/).
+
 The code is strongly inspired by the great YouTube Tutorials on accessing the YouTube API by [Corey Schafer](https://www.youtube.com/@coreyms):\
 Check them out here:
 - [Getting Started - Creating an API Key and Querying the API](https://youtu.be/th5_9woFJmk)
