@@ -110,6 +110,12 @@ def get_channel_data_from_handle(api_client, handle: str):
     # Parse 'publishedAt' string to datetime object using defined function
     published_date = parse_published_at(response['items'][0]['snippet']['publishedAt'])
 
+    # Check if 'defaultLanguage' and 'country' exist in 'snippet' or 'brandingSettings'
+    defaultLanguage = response['items'][0]['snippet'].get('defaultLanguage') or \
+                       (response['items'][0].get('brandingSettings', {}).get('channel') or {}).get('defaultLanguage')
+    country = response['items'][0]['snippet'].get('country') or \
+              (response['items'][0].get('brandingSettings', {}).get('channel') or {}).get('country')
+
     unsubscribed_trailer_exists = 'brandingSettings' in response['items'][0] and \
                                   'channel' in response['items'][0]['brandingSettings'] and \
                                   'unsubscribedTrailer' in response['items'][0]['brandingSettings']['channel']
@@ -126,6 +132,8 @@ def get_channel_data_from_handle(api_client, handle: str):
         'videoCount': int(response['items'][0]['statistics']['videoCount']),
         'topicIds': response['items'][0]['topicDetails']['topicIds'],
         'topicCategories': response['items'][0]['topicDetails']['topicCategories'],
+        'defaultLanguage': defaultLanguage,
+        'country': country,
         'unsubscribedTrailer': unsubscribed_trailer_exists,
         'uploads': response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
     }
@@ -238,21 +246,7 @@ def get_playlist_items_from_id(api_client, id: str):
         id (str): The playlist ID of the YouTube playlist.
 
     Returns:
-        list: A list of dictionaries containing playlist items data.
-              Each dictionary represents a playlist item and contains the following keys:
-              - title: Title of the playlist item.
-              - description: Description of the playlist item.
-              - channelId: Channel ID of the playlist item.
-              - channelTitle: Channel title of the playlist item.
-              - videoId: Video ID of the playlist item.
-              - url: URL of the playlist item.
-              - publishedAt: Published date of the playlist item.
-              - categoryId: Category ID of the playlist item.
-              - duration: Duration of the playlist item (in seconds).
-              - viewCount: View count of the playlist item.
-              - likeCount: Like count of the playlist item.
-              - commentCount: Comment count of the playlist item.
-
+        list: A list of dictionaries containing for videos in a playlist.
     """
     playlist_items_list = []
 
