@@ -36,14 +36,18 @@ And please check out and subscribe to my channels on YouTube, [the old, non-perf
 `cd youtube-data-analysis`
 
 
-2. Install the required dependencies using Conda:
+2. Create a virtual environment in the current directory with the required dependencies using Conda:
 
-`conda env create -f environment.yml`
+`conda env create --prefix ./venv -f environment.yml`
 
 Once the environment is created, activate it using:
 
 `conda activate youtube-analysis`
 
-3. In your Google Cloud project, download your credentials and store them as a file named  `client_secrets.json` in the root folder of this repository.
+3. Install the remaining required dependencies using pip:
 
-4. Run the `youtube_analysis.ipynb` notebook to perform data analysis and visualization.
+`pip install -r requirements.txt`
+
+4. In your Google Cloud project, download your credentials and store them as a file named  `client_secrets.json` in the root folder of this repository.
+
+5. Run the `youtube_analysis.ipynb` notebook to perform data analysis and visualization.

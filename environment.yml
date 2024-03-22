@@ -8,12 +8,9 @@ dependencies:
   - pandas
   - matplotlib
   - seaborn
-  - google-api-python-client
   - google-auth
   - google-auth-oauthlib
   - cryptography
-  - httplib2
-  - uritemplate
   - statsmodels
-  - PIL
-  - ipykernel
+  - pillow
+  - ipykernel 
