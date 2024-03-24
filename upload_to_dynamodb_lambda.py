@@ -1,11 +1,13 @@
 import boto3
 from botocore.exceptions import ClientError
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from io import FileIO
 import os
+import json
 import pickle
 import pandas as pd
 from decimal import Decimal
@@ -23,7 +25,7 @@ def track_and_wait():
         requests_in_last_minute += 1
         if requests_in_last_minute >= 60:
             print("Quota limit reached. Waiting for remaining time plus buffer...")
-            time_to_wait = 65 - (current_time - last_request_time) % 60  # Calculate remaining time plus buffer
+            time_to_wait = 70 - (current_time - last_request_time) % 60  # Calculate remaining time plus buffer
             time.sleep(time_to_wait)
             last_request_time = current_time + time_to_wait  # Update last request time
             requests_in_last_minute = 0
@@ -65,32 +67,91 @@ def upload_to_table(df, table_name):
             item = row.to_dict()
             batch.put_item(Item=item)
 
-# Authenticate and create YouTube Reporting API object
+# Function to retrieve OAuth credentials from AWS Secrets Manager
+def get_oauth_secret():
+    secret_name = "Youtube-API"
+    region_name = "eu-central-1"
+
+    # Create a Secrets Manager client
+    client = boto3.client('secretsmanager', region_name=region_name)
+
+    # Retrieve the secret value
+    response = client.get_secret_value(SecretId=secret_name)
+    secret_dict = json.loads(response['SecretString'])
+
+    return secret_dict
+
+# Function to retrieve OAuth credentials from AWS Secrets Manager
+def get_oauth_token():
+    secret_name = "YouTubeTokenInfo"
+    region_name = "eu-central-1"
+
+    # Create a Secrets Manager client
+    client = boto3.client('secretsmanager', region_name=region_name)
+
+    # Retrieve the secret value
+    response = client.get_secret_value(SecretId=secret_name)
+    secret_dict = json.loads(response['SecretString'])
+
+    return secret_dict
+
+# Function to refresh OAuth credentials
+def refresh_credentials(credentials_dict):
+    # Construct the flow using the client secrets JSON file and scopes
+    flow = Flow.from_client_config(credentials_dict, scopes=[
+        'https://www.googleapis.com/auth/youtube.readonly',
+        'https://www.googleapis.com/auth/yt-analytics.readonly'
+    ])
+    
+    # Run the OAuth flow to generate a new access token
+    credentials = flow.run_local_server(port=8080, prompt='consent')
+
+    return credentials
+
+# Function to authenticate with YouTube Reporting API using OAuth credentials
 def authenticate_youtube_reporting():
     credentials = None
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            credentials = pickle.load(token)
 
-    if not credentials or not credentials.valid:
-        if credentials and credentials.expired and credentials.refresh_token:
+    credentials_dict = get_oauth_token()
+
+    # Check if the credentials are available in the Secrets Manager
+    if 'token' in credentials_dict and 'refresh_token' in credentials_dict:
+        credentials = Credentials.from_authorized_user_info(credentials_dict)
+
+        # Check if the credentials are expired
+        if credentials.expired:
+            # Refresh the credentials
             credentials.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'client_secrets.json',
-                scopes=[
-                    'https://www.googleapis.com/auth/youtube.readonly',
-                    'https://www.googleapis.com/auth/yt-analytics.readonly'
-                ]
-            )
-            credentials = flow.run_local_server(port=8080, prompt='consent')
-            with open('token.pickle', 'wb') as f:
-                pickle.dump(credentials, f)
-    return build('youtubereporting', 'v1', credentials=credentials)
+
+            # Store the new credentials in Secrets Manager
+            secret_name = "YouTubeTokenInfo"
+            region_name = "eu-central-1"
+            client = boto3.client('secretsmanager', region_name=region_name)
+            client.put_secret_value(SecretId=secret_name, SecretString=credentials.to_json())
+    else:
+        # If credentials are not available, initiate the authentication flow
+        client_secret = get_oauth_secret()
+        flow = InstalledAppFlow.from_client_config(
+            client_secret,
+            scopes=[
+                'https://www.googleapis.com/auth/youtube.readonly',
+                'https://www.googleapis.com/auth/yt-analytics.readonly'
+            ]
+        )
+        credentials = flow.run_local_server(port=8080, prompt='consent')
+
+        # Store the new credentials in Secrets Manager
+        secret_name = "YouTubeTokenInfo"
+        region_name = "eu-central-1"
+        client = boto3.client('secretsmanager', region_name=region_name)
+        client.put_secret_value(SecretId=secret_name, SecretString=credentials.to_json())
+        
+    # Build and return the YouTube Reporting API object
+    youtube_reporting = build('youtubereporting', 'v1', credentials=credentials)
+    return youtube_reporting
 
 # Main function to process reports
 def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
-    youtube_reporting = authenticate_youtube_reporting()
     track_and_wait()
     reports_result = youtube_reporting.jobs().reports().list(jobId=job_id).execute()
 
@@ -135,6 +196,9 @@ def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
                 with table.batch_writer() as batch:
                     batch.put_item(Item=report)              
             os.remove(local_file)
+
+#initiate the connection
+youtube_reporting = authenticate_youtube_reporting()
 
 # Define jobs with their respective table names, composite key columns, and columns requiring Decimal conversion
 jobs = {
