@@ -51,3 +51,8 @@ Once the environment is created, activate it using:
 4. In your Google Cloud project, download your credentials and store them as a file named  `client_secrets.json` in the root folder of this repository.
 
 5. Run the `youtube_analysis.ipynb` notebook to perform data analysis and visualization.
+
+## AWS Data storage solution on the cheap
+
+The analysis showed that detailed data on annotations and other things such as demographics is only available in the daily reports which can be scheduled using the [YouTube Reporting API](https://developers.google.com/youtube/reporting/v1/reports). Since one does not manually want to download reports every day, I created an automated cloud-based solution on AWS largely leveraging services which are part of the Free Tier. These are AWS Lambda, DynamoDB and Amazon EventBridge, while small fees may occur for the handling of the Google API OAuth credentials in AWS Secrets Manager.
+To see my approach, please see this [tutorial page](AWS_Storage_Solution.md). 
