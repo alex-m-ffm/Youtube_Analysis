@@ -4,4 +4,4 @@ client_secrets.json
 *.csv
 /venv
 /lambda
-/lambda.zip
+lambda.zip
