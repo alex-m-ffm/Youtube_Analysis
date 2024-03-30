@@ -192,6 +192,7 @@ def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
                 #logger.info(f"Processing DataFrame for report {report['id']}...")
                 df['createTime'] = report['createTime']
                 df['date'] = convert_date(df['date'])
+                df['video_id'] = df['video_id'].astype(str)
                 df['composite_key'] = df[composite_key_cols].astype(str).agg('_'.join, axis=1)
                 for col in decimal_cols:
                     df[col] = df[col].apply(convert_float_to_decimal)
