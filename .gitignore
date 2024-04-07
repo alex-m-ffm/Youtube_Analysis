@@ -4,5 +4,5 @@ client_secrets.json
 *.csv
 /venv
 *.zip
-/__pycache__
+/__pycache__/
 lambda_upload_fd.py

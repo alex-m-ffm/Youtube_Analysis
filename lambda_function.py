@@ -99,19 +99,6 @@ def get_oauth_token():
 
     return secret_dict
 
-# Function to refresh OAuth credentials
-def refresh_credentials(credentials_dict):
-    # Construct the flow using the client secrets JSON file and scopes
-    flow = Flow.from_client_config(credentials_dict, scopes=[
-        'https://www.googleapis.com/auth/youtube.readonly',
-        'https://www.googleapis.com/auth/yt-analytics.readonly'
-    ])
-    
-    # Run the OAuth flow to generate a new access token
-    credentials = flow.run_local_server(port=8080, prompt='consent')
-
-    return credentials
-
 # Function to authenticate with YouTube Reporting API using OAuth credentials
 def authenticate_youtube_reporting():
     credentials = None
