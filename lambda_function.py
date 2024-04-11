@@ -28,7 +28,7 @@ def track_and_wait():
     if current_time - last_request_time < 60:
         requests_in_last_minute += 1
         if requests_in_last_minute >= 60:
-            time_to_wait = 75 - (current_time - last_request_time) % 60  # Calculate remaining time plus buffer
+            time_to_wait = 75 - round(current_time - last_request_time) % 60  # Calculate remaining time plus buffer
             print(f"Quota limit reached. Waiting for {time_to_wait} seconds...")
             time.sleep(time_to_wait)
             last_request_time = current_time + time_to_wait  # Update last request time
@@ -73,8 +73,8 @@ def upload_to_table(df, table_name):
 
 # Function to retrieve OAuth credentials from AWS Secrets Manager
 def get_oauth_secret():
-    secret_name = "Youtube-API"
-    region_name = "eu-central-1"
+    secret_name = os.environ.get('OAuth_Secret_Name')
+    region_name = os.environ.get('AWS_Region')
 
     # Create a Secrets Manager client
     client = boto3.client('secretsmanager', region_name=region_name)
@@ -87,8 +87,8 @@ def get_oauth_secret():
 
 # Function to retrieve OAuth credentials from AWS Secrets Manager
 def get_oauth_token():
-    secret_name = "YouTubeTokenInfo"
-    region_name = "eu-central-1"
+    secret_name = os.environ.get('OAuth_Token_Name')
+    region_name = os.environ.get('AWS_Region')
 
     # Create a Secrets Manager client
     client = boto3.client('secretsmanager', region_name=region_name)
@@ -115,8 +115,9 @@ def authenticate_youtube_reporting():
             credentials.refresh(Request())
 
             # Store the new credentials in Secrets Manager
-            secret_name = "YouTubeTokenInfo"
-            region_name = "eu-central-1"
+            secret_name = os.environ.get('OAuth_Token_Name')
+            region_name = os.environ.get('AWS_Region')
+
             client = boto3.client('secretsmanager', region_name=region_name)
             client.put_secret_value(SecretId=secret_name, SecretString=credentials.to_json())
     else:
@@ -132,8 +133,8 @@ def authenticate_youtube_reporting():
         credentials = flow.run_local_server(port=8080, prompt='consent')
 
         # Store the new credentials in Secrets Manager
-        secret_name = "YouTubeTokenInfo"
-        region_name = "eu-central-1"
+        secret_name = os.environ.get('OAuth_Token_Name')
+        region_name = os.environ.get('AWS_Region')
         client = boto3.client('secretsmanager', region_name=region_name)
         client.put_secret_value(SecretId=secret_name, SecretString=credentials.to_json())
         
