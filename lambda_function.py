@@ -203,38 +203,10 @@ def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
 #initiate the connection
 youtube_reporting = authenticate_youtube_reporting()
 
-# Define jobs with their respective table names, composite key columns, and columns requiring Decimal conversion
-jobs = {
-    'a7f41b3e-2b81-488d-8ed0-1f8c236e1a54': {
-        'table_name': 'channel_basic_a2',
-        'composite_key_cols': ['date', 'channel_id', 'video_id', 'live_or_on_demand', 'subscribed_status', 'country_code'],
-        'decimal_cols': ['watch_time_minutes', 'average_view_duration_seconds', 'average_view_duration_percentage', 
-                         'red_watch_time_minutes']
-    },
-    '4a7e6f19-e49f-4418-9800-f0ba979a8437': {
-        'table_name': 'channel_demographics_a1',
-        'composite_key_cols': ['date', 'channel_id', 'video_id', 'live_or_on_demand', 
-                               'subscribed_status', 'country_code', 'age_group', 'gender'],
-        'decimal_cols': ['views_percentage']
-    },
-    'bff80780-0f0f-4caa-af3e-de968ec64e9e': {
-        'table_name': 'channel_sharing_service_a1',
-        'composite_key_cols': ['date', 'channel_id', 'video_id', 'live_or_on_demand', 
-                               'subscribed_status', 'country_code', 'sharing_service'],
-        'decimal_cols': ['shares']
-    },
-    '82bc9b78-afbf-470e-8c1f-e9a7d2fe280d': {
-        'table_name': 'channel_combined_a2',
-        'composite_key_cols': ['date', 'channel_id', 'video_id', 'live_or_on_demand', 
-                               'subscribed_status', 'country_code', 'playback_location_type', 
-                               'traffic_source_type', 'device_type', 'operating_system'],
-        'decimal_cols': ['views', 'watch_time_minutes', 'average_view_duration_seconds', 
-                         'average_view_duration_percentage', 'red_views', 'red_watch_time_minutes']
-    }
-}
-
-
 def lambda_handler(event, context):
+    # Access the jobs dictionary from the event payload
+    jobs = event.get('jobs', {})
+
     logger.info('Hello! I will now retrieve and process your YouTube reports!')
 
     # Process reports for each job
