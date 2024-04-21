@@ -28,7 +28,7 @@ def track_and_wait():
     if current_time - last_request_time < 60:
         requests_in_last_minute += 1
         if requests_in_last_minute >= 60:
-            time_to_wait = 75 - round(current_time - last_request_time) % 60  # Calculate remaining time plus buffer
+            time_to_wait = 75 - round(current_time - last_request_time)  # Calculate remaining time plus buffer
             print(f"Quota limit reached. Waiting for {time_to_wait} seconds...")
             time.sleep(time_to_wait)
             last_request_time = current_time + time_to_wait  # Update last request time
