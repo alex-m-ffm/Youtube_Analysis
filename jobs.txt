@@ -64,3 +64,7 @@
 "aws_region": "eu-central-1",
 "secret_name": "FD_TokenInfo"
 }
+
+# clean-up
+{"tables" = ["channel_basic_a2", "channel_demographics_a1",
+              "channel_sharing_service_a1", "channel_combined_a2"]}

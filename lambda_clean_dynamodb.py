@@ -10,6 +10,9 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event, context):
     # Initialize DynamoDB client
     dynamodb = boto3.client('dynamodb')
+
+    #retrieve tables from payload
+    tables = event.get("tables", [])
     
     # Get the current date and the first day of the current month
     current_date = datetime.now()
@@ -32,10 +35,7 @@ def lambda_handler(event, context):
         ":previous_month": {"S": first_day_of_previous_month.strftime("%Y-%m")},
         ":two_months_ago": {"S": first_day_of_two_months_ago.strftime("%Y-%m")}
     }
-    
-    tables = ['channel_basic_a2', 'channel_demographics_a1',
-              'channel_sharing_service_a1', 'channel_combined_a2']
-    
+        
     for table_name in tables:
         response = dynamodb.scan(
             TableName=table_name,
