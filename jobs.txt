@@ -59,8 +59,8 @@
                                "traffic_source_type", "device_type", "operating_system"],
         "decimal_cols": ["views", "watch_time_minutes", "average_view_duration_seconds", 
                          "average_view_duration_percentage", "red_views", "red_watch_time_minutes"]
-    },
+    }
+},
 "aws_region": "eu-central-1",
 "secret_name": "FD_TokenInfo"
-}
 }
