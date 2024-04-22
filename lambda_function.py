@@ -1,6 +1,4 @@
 import boto3
-from botocore.exceptions import ClientError
-from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -71,27 +69,12 @@ def upload_to_table(df, table_name):
             item = row.to_dict()
             batch.put_item(Item=item)
 
-# Function to retrieve OAuth credentials from AWS Secrets Manager
-def get_oauth_secret():
-    secret_name = os.environ.get('OAuth_Secret_Name')
-    region_name = os.environ.get('AWS_Region')
-
-    # Create a Secrets Manager client
-    client = boto3.client('secretsmanager', region_name=region_name)
-
-    # Retrieve the secret value
-    response = client.get_secret_value(SecretId=secret_name)
-    secret_dict = json.loads(response['SecretString'])
-
-    return secret_dict
 
 # Function to retrieve OAuth credentials from AWS Secrets Manager
-def get_oauth_token():
-    secret_name = os.environ.get('OAuth_Token_Name')
-    region_name = os.environ.get('AWS_Region')
+def get_oauth_token(secret_name, aws_region):
 
     # Create a Secrets Manager client
-    client = boto3.client('secretsmanager', region_name=region_name)
+    client = boto3.client('secretsmanager', region_name=aws_region)
 
     # Retrieve the secret value
     response = client.get_secret_value(SecretId=secret_name)
@@ -100,10 +83,10 @@ def get_oauth_token():
     return secret_dict
 
 # Function to authenticate with YouTube Reporting API using OAuth credentials
-def authenticate_youtube_reporting():
+def authenticate_youtube_reporting(secret_name, aws_region):
+    
     credentials = None
-
-    credentials_dict = get_oauth_token()
+    credentials_dict = get_oauth_token(secret_name, aws_region)
 
     # Check if the credentials are available in the Secrets Manager
     if 'token' in credentials_dict and 'refresh_token' in credentials_dict:
@@ -114,38 +97,20 @@ def authenticate_youtube_reporting():
             # Refresh the credentials
             credentials.refresh(Request())
 
-            # Store the new credentials in Secrets Manager
-            secret_name = os.environ.get('OAuth_Token_Name')
-            region_name = os.environ.get('AWS_Region')
-
-            client = boto3.client('secretsmanager', region_name=region_name)
+            client = boto3.client('secretsmanager', region_name=aws_region)
             client.put_secret_value(SecretId=secret_name, SecretString=credentials.to_json())
     else:
         # If credentials are not available, initiate the authentication flow
-        client_secret = get_oauth_secret()
-        flow = InstalledAppFlow.from_client_config(
-            client_secret,
-            scopes=[
-                'https://www.googleapis.com/auth/youtube.readonly',
-                'https://www.googleapis.com/auth/yt-analytics.readonly'
-            ]
-        )
-        credentials = flow.run_local_server(port=8080, prompt='consent')
-
-        # Store the new credentials in Secrets Manager
-        secret_name = os.environ.get('OAuth_Token_Name')
-        region_name = os.environ.get('AWS_Region')
-        client = boto3.client('secretsmanager', region_name=region_name)
-        client.put_secret_value(SecretId=secret_name, SecretString=credentials.to_json())
+        raise("Credentials are not available.")
         
     # Build and return the YouTube Reporting API object
     youtube_reporting = build('youtubereporting', 'v1', credentials=credentials)
     return youtube_reporting
 
 # Main function to process reports
-def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
+def process_reports(job_id, table_name, composite_key_cols, decimal_cols, youtube_client):
     track_and_wait()
-    reports_result = youtube_reporting.jobs().reports().list(jobId=job_id).execute()
+    reports_result = youtube_client.jobs().reports().list(jobId=job_id).execute()
 
     dynamodb = boto3.resource('dynamodb')
 
@@ -169,11 +134,13 @@ def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
         existing_reports = []
     
     new_reports = [report['id'] for report in reports_result['reports'] if report['id'] not in existing_reports]
+
+    total_rows_added = 0
     
     for report in reports_result['reports']:
         if report['id'] in new_reports:
             local_file = f"/tmp/{report['id']}.csv"
-            download_report(youtube_reporting, report['downloadUrl'], local_file)
+            download_report(youtube_client, report['downloadUrl'], local_file)
             #logger.info(f"Report {report['id']} downloaded successfully.")
             df = pd.read_csv(local_file)
             if not df.empty:
@@ -184,6 +151,8 @@ def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
                 df['composite_key'] = df[composite_key_cols].astype(str).agg('_'.join, axis=1)
                 for col in decimal_cols:
                     df[col] = df[col].apply(convert_float_to_decimal)
+
+                total_rows_added += len(df)
                 #logger.info(f"Preprocessing DataFrame for report {report['id']} done.")
                 upload_to_table(df, table_name)
                 #logger.info(f"Report {report['id']} uploaded to DynamoDB table {table_name}.")
@@ -198,22 +167,25 @@ def process_reports(job_id, table_name, composite_key_cols, decimal_cols):
             # Remove the file after processing
             os.remove(local_file)
             #logger.info(f"Temporary file {local_file} removed.")
-    logger.info(f"Processing of Reports for {table_name} completed.")              
+    logger.info(f"Processing of Reports for {table_name} completed. {total_rows_added} new records added.")              
 
-#initiate the connection
-youtube_reporting = authenticate_youtube_reporting()
+
 
 def lambda_handler(event, context):
     # Access the jobs dictionary from the event payload
     jobs = event.get('jobs', {})
+    secret_name = event.get('secret_name', '')
+    aws_region = event.get('aws_region', '')
 
     logger.info('Hello! I will now retrieve and process your YouTube reports!')
+
+    #initiate the connection
+    youtube_reporting = authenticate_youtube_reporting(secret_name, aws_region)
 
     # Process reports for each job
     for job_id, params in jobs.items():
         try:
-            # Your code logic here
-            process_reports(job_id, params['table_name'], params['composite_key_cols'], params['decimal_cols'])
+            process_reports(job_id, params['table_name'], params['composite_key_cols'], params['decimal_cols'], youtube_reporting)
 
         except Exception as e:
             logger.exception('An error occurred:')
