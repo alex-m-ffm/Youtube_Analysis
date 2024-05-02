@@ -22,10 +22,6 @@ resource "aws_dynamodb_table" "report_tables" {
   }
 }
 
-output "report_table_arn" {
-  value = [aws_dynamodb_table.report_tables.*.arn]
-}
-
 resource "aws_dynamodb_table" "jobs_table" {
 
   name = "reports"
@@ -39,8 +35,8 @@ resource "aws_dynamodb_table" "jobs_table" {
   }
 }
 
-output "jobs_table_arn" {
-  value = aws_dynamodb_table.jobs_table.arn
+output "table_arns" {
+  value = concat([for i in range(length(var.reports)) : aws_dynamodb_table.report_tables[i].arn], [aws_dynamodb_table.jobs_table.arn])
 }
 
 # now for the mapping tables
