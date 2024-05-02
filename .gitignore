@@ -6,3 +6,7 @@ client_secrets.json
 *.zip
 /__pycache__/
 lambda_upload_fd.py
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl
