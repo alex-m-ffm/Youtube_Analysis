@@ -54,7 +54,7 @@ Once the environment is created, activate it using:
 
 ## AWS Data storage solution on the cheap
 
-The analysis showed that detailed data on annotations and other things such as demographics is only available in the daily reports which can be scheduled using the [YouTube Reporting API](https://developers.google.com/youtube/reporting/v1/reports). Since one does not manually want to download reports every day, I created an automated cloud-based solution on AWS largely leveraging services which are part of the Free Tier. These are AWS Lambda, DynamoDB and Amazon EventBridge, while small fees may occur for the handling of the Google API OAuth credentials in AWS Secrets Manager.
+The analysis showed that detailed data on annotations and other things such as demographics is only available in the daily reports which can be scheduled using the [YouTube Reporting API](https://developers.google.com/youtube/reporting/v1/reports). Since one does not manually want to download reports every day, I created an automated cloud-based solution on AWS largely leveraging services which are part of the Free Tier. These are AWS Lambda, DynamoDB, Amazon EventBridge, as well as the Systems Manager Parameter Store for the handling of the Google API OAuth credentials.
 To see my approach, please see this [tutorial page](AWS_Storage_Solution.md).
 I have also created a video tutorial on how to set this up. See below.
 
