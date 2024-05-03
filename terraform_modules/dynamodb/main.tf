@@ -24,7 +24,7 @@ resource "aws_dynamodb_table" "report_tables" {
 
 resource "aws_dynamodb_table" "jobs_table" {
 
-  name = "reports_1"
+  name = "reports"
   billing_mode = "PAY_PER_REQUEST"
   
   hash_key = "id"
@@ -43,8 +43,8 @@ output "table_arns" {
 
 variable "mappings" {
   type = list(string)
-  default = ["traffic_source_type_1", "playback_location_type_1", "traffic_source_detail_1", 
-  "device_type_1", "operating_system_1", "sharing_service_1", "annotations_type_1"]
+  default = ["traffic_source_type", "playback_location_type", "traffic_source_detail", 
+  "device_type", "operating_system", "sharing_service", "annotations_type"]
 }
 
 resource "aws_dynamodb_table" "mapping_tables" {

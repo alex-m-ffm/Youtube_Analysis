@@ -28,7 +28,7 @@ data "aws_caller_identity" "current" {}
 
 module "dynamodb" {
   source = "./terraform_modules/dynamodb"
-  reports = ["channel_basic_a2_1", "channel_combined_a2_1", "channel_demographics_a1_1", "channel_sharing_service_a1_1"]
+  reports = ["channel_basic_a2", "channel_combined_a2", "channel_demographics_a1", "channel_sharing_service_a1"]
 }
 
 module "secret" {
