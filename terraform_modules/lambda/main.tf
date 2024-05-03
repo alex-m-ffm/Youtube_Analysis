@@ -62,10 +62,6 @@ resource "aws_lambda_function" "lambda_process" {
   runtime        = "python3.12"
   role           = module.iam_module.lambda_process_role_arn
   timeout = 900
-  #dead_letter_config {
-  #  target_arn = module.sns.sns_process_errors_arn
-  #}
-  #depends_on = [ module.sns ]
   }
 
 resource "aws_lambda_function" "lambda_clean" {
@@ -77,13 +73,30 @@ resource "aws_lambda_function" "lambda_clean" {
   runtime        = "python3.12"
   role           = module.iam_module.lambda_clean_role_arn
   timeout = 900
-  #dead_letter_config {
-  #  target_arn = module.sns.sns_cleanup_errors_arn
-  #}
-  #depends_on = [ module.sns ]
+  depends_on = [ module.sns ]
   }
 
-  module "eventbridge" {
+resource "aws_lambda_function_event_invoke_config" "lambda_process_destination" {
+  function_name = aws_lambda_function.lambda_process.function_name
+
+  destination_config {
+    on_failure {
+      destination = module.sns.sns_process_errors_arn
+    }
+  }
+}
+
+resource "aws_lambda_function_event_invoke_config" "lambda_clean_destination" {
+  function_name = aws_lambda_function.lambda_clean.function_name
+
+  destination_config {
+    on_failure {
+      destination = module.sns.sns_cleanup_errors_arn
+    }
+  }
+}
+
+module "eventbridge" {
   source = "./eventbridge"
   account_id = var.account_id
   lambda_clean_arn = aws_lambda_function.lambda_clean.arn
