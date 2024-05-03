@@ -32,7 +32,7 @@ module "dynamodb" {
 }
 
 module "secret" {
-  source = "./terraform_modules/secretsmanager"
+  source = "./terraform_modules/parameter_store"
   token = var.token
 }
 

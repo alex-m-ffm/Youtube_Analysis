@@ -70,15 +70,18 @@ def upload_to_table(df, table_name):
             batch.put_item(Item=item)
 
 
-# Function to retrieve OAuth credentials from AWS Secrets Manager
-def get_oauth_token(secret_name, aws_region):
+# Function to retrieve OAuth credentials from AWS Systems Manager Parameter Store
+def get_oauth_token(parameter_name, aws_region):
 
-    # Create a Secrets Manager client
-    client = boto3.client('secretsmanager', region_name=aws_region)
+    # Create a Systems Manager client
+    ssm_client = boto3.client('ssm', region_name=aws_region)
 
-    # Retrieve the secret value
-    response = client.get_secret_value(SecretId=secret_name)
-    secret_dict = json.loads(response['SecretString'])
+    # Retrieve the parameter value
+    response = ssm_client.get_parameter(Name=parameter_name, WithDecryption=True)
+    parameter_value = response['Parameter']['Value']
+
+    # Parse the parameter value (assuming it's a JSON string)
+    secret_dict = json.loads(parameter_value)
 
     return secret_dict
 
@@ -88,7 +91,7 @@ def authenticate_youtube_reporting(secret_name, aws_region):
     credentials = None
     credentials_dict = get_oauth_token(secret_name, aws_region)
 
-    # Check if the credentials are available in the Secrets Manager
+    # Check if the credentials are available in the SSM Parameter Store
     if 'token' in credentials_dict and 'refresh_token' in credentials_dict:
         credentials = Credentials.from_authorized_user_info(credentials_dict)
 
@@ -97,8 +100,11 @@ def authenticate_youtube_reporting(secret_name, aws_region):
             # Refresh the credentials
             credentials.refresh(Request())
 
-            client = boto3.client('secretsmanager', region_name=aws_region)
-            client.put_secret_value(SecretId=secret_name, SecretString=credentials.to_json())
+            ssm_client = boto3.client('ssm', region_name=aws_region)
+            ssm_client.put_parameter(Name=secret_name,
+                                                Value=credentials.to_json(),
+                                                Type='SecureString',
+                                                Overwrite=True)
     else:
         # If credentials are not available, initiate the authentication flow
         raise("Credentials are not available.")

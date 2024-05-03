@@ -71,7 +71,7 @@ resource "aws_iam_policy" "dynamodb_batch_access" {
 
 resource "aws_iam_policy" "secret_access" {
   name        = "Secret-Access"
-  description = "Policy for accessing secrets managed in AWS Secrets Manager"
+  description = "Policy for accessing secrets managed in AWS Systems Manager Parameter Store"
 
   policy      = jsonencode({
 	"Version": "2012-10-17",
@@ -80,8 +80,8 @@ resource "aws_iam_policy" "secret_access" {
 			"Sid": "VisualEditor0",
 			"Effect": "Allow",
 			"Action": [
-				"secretsmanager:GetSecretValue",
-				"secretsmanager:PutSecretValue"
+				"ssm:GetParameter", 
+        "ssm:PutParameter"
 			],
 			"Resource": var.secret_arn
 		}
